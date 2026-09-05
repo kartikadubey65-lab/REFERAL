@@ -21,7 +21,15 @@ import {
   CheckCircle2,
   Clock3,
 } from 'lucide-react';
-import type { Member, Referral, Voucher, Email } from '../lib/referrals';
+import {
+  createDemoState,
+  updateDemoState,
+  type DemoAction,
+  type Member,
+  type Referral,
+  type Voucher,
+  type Email,
+} from '../lib/local-circle';
 type State = {
   signedIn: boolean;
   member?: Member;
@@ -68,9 +76,8 @@ export default function Circle() {
   const dialog = useRef<HTMLDialogElement>(null);
   async function load() {
     try {
-      const r = await fetch('/api/circle');
-      const d = (await r.json()) as State & { error?: string };
-      if (!r.ok) throw new Error(d.error);
+      const saved = localStorage.getItem('kartika-referral-demo');
+      const d = saved ? (JSON.parse(saved) as State) : createDemoState();
       setData(d);
       setError('');
     } catch (e) {
@@ -96,20 +103,18 @@ export default function Circle() {
       return () => clearTimeout(t);
     }
   }, [toast]);
-  async function act(payload: Record<string, string>, success: string) {
+  async function act(payload: DemoAction, success: string) {
     setBusy(true);
     setFormError('');
     try {
-      const r = await fetch('/api/circle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const d = (await r.json()) as { error?: string };
-      if (!r.ok) throw new Error(d.error);
+      const d = updateDemoState(
+        data as ReturnType<typeof createDemoState>,
+        payload,
+      );
+      localStorage.setItem('kartika-referral-demo', JSON.stringify(d));
+      setData(d);
       setModal(null);
       setToast(success);
-      await load();
     } catch (e) {
       const m = e instanceof Error ? e.message : 'Please try again.';
       setFormError(m);
@@ -124,7 +129,7 @@ export default function Circle() {
     setModal(type);
   }
   function signIn() {
-    location.href = `/signin-with-chatgpt?return_to=${encodeURIComponent(location.pathname + location.search)}`;
+    setData(createDemoState());
   }
   async function copy(value: string) {
     try {
@@ -307,9 +312,16 @@ export default function Circle() {
             </small>
           </div>
           {data.signedIn && (
-            <a href="/signout-with-chatgpt?return_to=/" title="Sign out">
+            <button
+              title="Reset this browser demo"
+              onClick={() => {
+                localStorage.removeItem('kartika-referral-demo');
+                setData(createDemoState());
+                setToast('Browser demo reset');
+              }}
+            >
               <LogOut size={17} />
-            </a>
+            </button>
           )}
         </div>
       </aside>
@@ -965,6 +977,12 @@ export default function Circle() {
           >
             <X size={16} />
           </button>
+        </div>
+      )}
+      {view === 'Overview' && (
+        <div className="notice">
+          Vercel demo mode · Your referrals and vouchers are stored only in this
+          browser.
         </div>
       )}
     </div>

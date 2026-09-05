@@ -1,4 +1,0 @@
-# Copy to .dev.vars for local Cloudflare development.
-ADMIN_EMAIL=
-RESEND_API_KEY=
-EMAIL_FROM=
